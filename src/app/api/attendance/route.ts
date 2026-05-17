@@ -14,10 +14,36 @@ export async function GET(request: Request) {
     } else if (userId) {
       records = await FirebaseDatabaseService.getCollectionWhere('attendance', 'userId', '==', userId);
     } else if (zoneId) {
-      records = await FirebaseDatabaseService.getCollectionWhere('attendance', 'zoneId', '==', zoneId);
+      const { ZONES } = await import('@/config/zones');
+      const targetZone = ZONES.find(z => z.id === zoneId);
+      const zoneName = targetZone?.name || '';
+      const zoneSlug = targetZone?.slug || '';
+
+      // Fetch broad collection of attendance records to ensure we catch all variations of zoneId
+      const allRecords = await FirebaseDatabaseService.getCollection('attendance', 1000);
+      
+      // Also fetch zone members to match records by userId if zoneId is missing/unknown in the attendance record
+      const zoneMembers = await FirebaseDatabaseService.getCollectionWhere('zone_members', 'zoneId', '==', zoneId);
+      const memberUserIds = new Set(zoneMembers.map((m: any) => m.userId));
+
+      records = allRecords.filter((r: any) => {
+        if (r.zoneId === zoneId) return true;
+        if (zoneName && r.zoneId === zoneName) return true;
+        if (zoneSlug && r.zoneId === zoneSlug) return true;
+        if (r.userId && memberUserIds.has(r.userId)) return true;
+        if (r.user_id && memberUserIds.has(r.user_id)) return true;
+        return false;
+      });
     } else {
-      records = await FirebaseDatabaseService.getCollection('attendance', 200);
+      records = await FirebaseDatabaseService.getCollection('attendance', 500);
     }
+
+    // Sort records by timestamp descending (most recent first)
+    records.sort((a: any, b: any) => {
+      const timeA = new Date(a.timestamp || a.check_in_time || a.created_at || 0).getTime();
+      const timeB = new Date(b.timestamp || b.check_in_time || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
     
     return NextResponse.json({
       success: true,
