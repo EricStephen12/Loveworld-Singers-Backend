@@ -411,6 +411,64 @@ export class FirebaseDatabaseService {
 
   static async getCollectionWhere(collectionName: string, field: string, operator: any, value: any) {
     try {
+      if (collectionName === 'song_history' && field === 'song_id') {
+        const strValue = String(value).trim();
+        const numValue = !isNaN(Number(value)) ? Number(value) : null;
+        const { getHistoryBySongId: getSupabaseHistory } = await import('./history-service');
+
+        const [snapStr, snapNum, supabaseHistory] = await Promise.all([
+          db.collection(collectionName).where(field, operator, strValue).get().catch(() => ({ docs: [] })),
+          numValue !== null ? db.collection(collectionName).where(field, operator, numValue).get().catch(() => ({ docs: [] })) : Promise.resolve({ docs: [] }),
+          numValue !== null ? getSupabaseHistory(numValue).catch(() => []) : Promise.resolve([])
+        ]);
+
+        const combinedMap = new Map();
+
+        const processAndAdd = (entry: any) => {
+          if (!entry || !entry.id) return;
+          let processedDate;
+          if (entry.created_at && typeof entry.created_at.toDate === 'function') {
+            processedDate = entry.created_at.toDate();
+          } else if (entry.created_at && typeof entry.created_at === 'object' && entry.created_at.seconds) {
+            processedDate = new Date(entry.created_at.seconds * 1000);
+          } else if (entry.created_at && typeof entry.created_at === 'string') {
+            processedDate = new Date(entry.created_at);
+          } else if (entry.created_at && typeof entry.created_at === 'number') {
+            processedDate = new Date(entry.created_at);
+          } else if (entry.date instanceof Date) {
+            processedDate = entry.date;
+          } else if (entry.date) {
+            processedDate = new Date(entry.date);
+          } else {
+            processedDate = new Date();
+          }
+
+          const formatted = {
+            id: String(entry.id),
+            type: entry.type || 'metadata',
+            title: entry.title || entry.version || 'Update',
+            description: entry.description || '',
+            old_value: entry.old_value || '',
+            new_value: entry.new_value || '',
+            created_by: entry.created_by || 'admin',
+            date: processedDate,
+            version: entry.version || entry.title || 'Update',
+            created_at: processedDate.toISOString()
+          };
+
+          combinedMap.set(formatted.id, formatted);
+        };
+
+        (supabaseHistory || []).forEach((item: any) => processAndAdd(item));
+        ((snapStr as any).docs || []).forEach((doc: any) => processAndAdd({ id: doc.id, ...doc.data() }));
+        ((snapNum as any).docs || []).forEach((doc: any) => processAndAdd({ id: doc.id, ...doc.data() }));
+
+        const historyEntries = Array.from(combinedMap.values());
+        historyEntries.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        return historyEntries;
+      }
+
       const snapshot = await db.collection(collectionName).where(field, operator, value).get()
       return snapshot.docs.map(doc => ({
         id: doc.id,
@@ -642,25 +700,7 @@ export class FirebaseDatabaseService {
   }
 
   static async getHistoryBySongId(songId: string | number) {
-    try {
-      const snapshot = await db.collection('song_history')
-        .where('song_id', '==', songId.toString())
-        .get()
-
-      const results = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      return results.sort((a, b) => {
-        const dateA = new Date((a as any).created_at || 0).getTime()
-        const dateB = new Date((b as any).created_at || 0).getTime()
-        return dateB - dateA
-      });
-    } catch (error) {
-      console.error('Error getting song history:', error)
-      return []
-    }
+    return await this.getCollectionWhere('song_history', 'song_id', '==', songId);
   }
 
   static async getGroupPosts(groupId: string) {
