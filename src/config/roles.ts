@@ -308,6 +308,7 @@ export const HQ_ADMIN_EMAILS = [
   'nnennawealth@gmail.com',     // Nnenna Wealth - HQ Admin
   'joykures@gmail.com',         // Joy Kures - HQ Admin (Restricted)
   'styleirech@gmail.com',       // HQ Admin
+  'usmanrazaqj@gmail.com',      // Usman Razaq - HQ Admin (Restricted - Karaoke/Master Library)
 ];
 
 // Helper to check if email should be HQ admin
