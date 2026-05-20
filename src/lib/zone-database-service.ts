@@ -21,12 +21,21 @@ export class ZoneDatabaseService {
 
   static async getPraiseNightsByZone(zoneId: string, limitCount = 10) {
     try {
-      const allPraiseNights = await FirebaseDatabaseService.getCollectionWhere(
-        'zone_praise_nights',
-        'zoneId',
-        '==',
-        zoneId
-      )
+      const { isHQGroup } = await import('@/config/zones')
+      const isHQ = isHQGroup(zoneId)
+      const collectionName = isHQ ? 'praise_nights' : 'zone_praise_nights'
+
+      let allPraiseNights = []
+      if (isHQ) {
+        allPraiseNights = await FirebaseDatabaseService.getCollection(collectionName, limitCount)
+      } else {
+        allPraiseNights = await FirebaseDatabaseService.getCollectionWhere(
+          collectionName,
+          'zoneId',
+          '==',
+          zoneId
+        )
+      }
 
       const sorted = allPraiseNights.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || 0).getTime()
@@ -36,7 +45,7 @@ export class ZoneDatabaseService {
 
       return sorted.slice(0, limitCount)
     } catch (error) {
- console.error('Error getting praise nights by zone:', error)
+      console.error('Error getting praise nights by zone:', error)
       return []
     }
   }
