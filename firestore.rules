@@ -522,6 +522,52 @@ service cloud.firestore {
       allow update, delete: if request.auth != null;
     }
 
+    // ===== MEDIA CHANNELS =====
+    match /media_channels/{channelId} {
+      // Anyone authenticated can read channels
+      allow read: if request.auth != null;
+
+      // Only HQ Admins can create/delete channels
+      allow create, delete: if request.auth != null 
+        && request.auth.token.email in [
+          'ihenacho23@gmail.com', 
+          'ephraimloveworld1@gmail.com',
+          'takeshopstores@gmail.com',
+          'nnennawealth@gmail.com',
+          'joykures@gmail.com',
+          'styleirech@gmail.com'
+        ];
+
+      // Update rules:
+      // - HQ Admins can update any field.
+      // - Any authenticated user can update subscriberCount or videoCount (for subscribing/unsubscribing and video counts).
+      allow update: if request.auth != null && (
+        (request.auth.token.email in [
+          'ihenacho23@gmail.com', 
+          'ephraimloveworld1@gmail.com',
+          'takeshopstores@gmail.com',
+          'nnennawealth@gmail.com',
+          'joykures@gmail.com',
+          'styleirech@gmail.com'
+        ]) || (
+          // Allow incrementing/decrementing subscriberCount/videoCount
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriberCount', 'videoCount', 'updatedAt'])
+        )
+      );
+    }
+
+    // ===== CHANNEL SUBSCRIPTIONS =====
+    match /channel_subscriptions/{subId} {
+      // Anyone authenticated can read subscriptions (usually users check their own)
+      allow read: if request.auth != null;
+
+      // Users can only create subscriptions for themselves
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Users can delete their own subscriptions
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
     // ===== MEDIA CATEGORIES (Dynamic video categories) =====
     match /media_categories/{categoryId} {
       allow read: if true;  // Anyone can read categories

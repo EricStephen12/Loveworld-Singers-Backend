@@ -1,4 +1,4 @@
-﻿import {
+import {
   collection,
   doc,
   getDoc,
@@ -38,6 +38,8 @@ export interface MediaVideo {
   updatedAt: Date
   createdBy?: string
   createdByName?: string
+  channelId?: string
+  channelName?: string
 }
 
 export type MediaVideoInput = Omit<MediaVideo, 'id' | 'createdAt' | 'updatedAt' | 'views' | 'likes'>
@@ -53,6 +55,15 @@ class MediaVideosService {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     })
+
+    if (data.channelId) {
+      try {
+        const { channelService } = await import('./channel-service')
+        await channelService.incrementVideoCount(data.channelId)
+      } catch (err) {
+        console.error('[MediaVideos] Error incrementing video count:', err)
+      }
+    }
 
     // Send push notification for new media (optional, admin can choose)
     if (notifyUsers) {
@@ -225,7 +236,19 @@ class MediaVideosService {
 
   async delete(id: string): Promise<void> {
     const docRef = doc(db, COLLECTION, id)
+    const docSnap = await getDoc(docRef)
+    const videoData = docSnap.exists() ? docSnap.data() : null
+
     await deleteDoc(docRef)
+
+    if (videoData?.channelId) {
+      try {
+        const { channelService } = await import('./channel-service')
+        await channelService.decrementVideoCount(videoData.channelId)
+      } catch (err) {
+        console.error('[MediaVideos] Error decrementing channel video count:', err)
+      }
+    }
 
     // Clean up playlists to maintain accurate counts
     try {
@@ -300,7 +323,9 @@ class MediaVideosService {
       createdAt: data.createdAt?.toDate?.() || new Date(),
       updatedAt: data.updatedAt?.toDate?.() || new Date(),
       createdBy: data.createdBy,
-      createdByName: data.createdByName
+      createdByName: data.createdByName,
+      channelId: data.channelId,
+      channelName: data.channelName
     }
   }
 }
