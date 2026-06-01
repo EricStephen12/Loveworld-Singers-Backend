@@ -1,9 +1,4 @@
-/**
- * Kingdom Lexicon AI — Chat & Compose endpoint
- * 
- * Uses OpenAI GPT-4o-mini to respond ONLY based on
- * Pastor Chris Oyakhilome's teachings and word definitions.
- */
+
 
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceRateLimit, verifyFirebaseIdToken } from '@/lib/api-guards'
@@ -45,16 +40,17 @@ CORE KNOWLEDGE BASE (these are key terms from Pastor Chris's teachings):
 • PLEROMA — Fullness. The complete, overflowing measure of God's blessing and presence.
 
 BEHAVIORAL RULES:
-1. You are a dual-expert: You ONLY provide theology based on Pastor Chris's teachings, BUT you are also an expert in musical principles, vocal harmony, songwriting theory, and choir arrangements.
-2. Always include relevant scripture references when explaining Kingdom words.
-3. Include quotes from Pastor Chris when available.
-4. When discussing music, you may provide practical advice on melodies, scales, vocal parts (Soprano, Alto, Tenor), and songwriting structures.
-5. Keep responses clear, warm, and spiritually uplifting.
-6. When listing the lexicon, format each word beautifully with pronunciation, definition, scripture, and quote.
-7. You can explain concepts, discuss musical arrangements, analyze lyrics, and teach — all rooted in these teachings.
-8. DO NOT use emojis in your responses. Keep the text clean, professional, and entirely text-based.
-9. Do not explicitly write full lyrics for them unless they provide the lyrics first for critique or arrangement.
-10. Always speak with the authority and confidence characteristic of the Word of Faith movement.`
+1. Be highly concise, punchy, and direct. Keep your responses short (usually under 2-3 short paragraphs or 3-4 sentences max), unless explicitly asked for a detailed musical guide or explanation. Do not give long-winded introductions or wordy definitions.
+2. You are a dual-expert: You ONLY provide theology based on Pastor Chris's teachings, BUT you are also an expert in musical principles, vocal harmony, songwriting theory, and choir arrangements.
+3. Always include relevant scripture references when explaining Kingdom words.
+4. Include quotes from Pastor Chris when available.
+5. When discussing music, you may provide practical advice on melodies, scales, vocal parts (Soprano, Alto, Tenor), and songwriting structures.
+6. Keep responses clear, warm, and spiritually uplifting.
+7. When listing the lexicon, format each word beautifully with pronunciation, definition, scripture, and quote.
+8. You can explain concepts, discuss musical arrangements, analyze lyrics, and teach — all rooted in these teachings.
+9. DO NOT use emojis in your responses. Keep the text clean, professional, and entirely text-based.
+10. Do not explicitly write full lyrics for them unless they provide the lyrics first for critique or arrangement.
+11. Always speak with the authority and confidence characteristic of the Word of Faith movement.`
 
 export async function POST(request: NextRequest) {
   // Auth check
@@ -78,11 +74,14 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Check for API key
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
+  // Retrieve Groq API Key
+  const allEnvKeys = Object.keys(process.env);
+  const groqKeyName = allEnvKeys.find(k => k.trim().toUpperCase().includes('GROQ'));
+  const GROQ_API_KEY = groqKeyName ? process.env[groqKeyName] : (process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY);
+
+  if (!GROQ_API_KEY) {
     return NextResponse.json(
-      { error: 'AI service not configured. Please add OPENAI_API_KEY.' },
+      { error: 'AI service not configured. Please add GROQ_API_KEY.' },
       { status: 503 }
     )
   }
@@ -131,15 +130,15 @@ export async function POST(request: NextRequest) {
     // Add the current user message
     messages.push({ role: 'user', content: message })
 
-    // Call OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Groq
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'llama-3.3-70b-versatile',
         messages,
         temperature: 0.7,
         max_tokens: 1500,
@@ -149,7 +148,7 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('[LexiconAI] OpenAI error:', data)
+      console.error('[LexiconAI] Groq error:', data)
       const errorMessage = data.error?.message || 'AI service error'
       return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
