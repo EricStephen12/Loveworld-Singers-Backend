@@ -16,8 +16,8 @@ export class PraiseNightSongsService {
 
       let snapshot = await songsCol.where('praiseNightId', '==', praiseNightId).get()
 
-      // Try alternative field names for HQ groups
-      if (snapshot.empty && zoneId && isHQGroup(zoneId)) {
+      // Try alternative field names if no songs found (handles legacy/zonal data mismatches)
+      if (snapshot.empty) {
         snapshot = await songsCol.where('praisenightid', '==', praiseNightId).get()
 
         if (snapshot.empty) {

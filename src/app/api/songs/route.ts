@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { isHQGroup } from '@/config/zones';
 
 export async function GET() {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     if (body.subGroupId) {
       collectionName = 'subgroup_songs';
     } else if (body.zoneId) {
-      if (body.zoneId === 'hq' || body.zoneId.toLowerCase().includes('hq')) {
+      if (body.zoneId === 'hq' || body.zoneId.toLowerCase().includes('hq') || isHQGroup(body.zoneId)) {
         collectionName = 'praise_night_songs';
       } else {
         collectionName = 'zone_songs';
