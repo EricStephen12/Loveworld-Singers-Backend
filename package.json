@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "agora-token": "^2.0.5",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
