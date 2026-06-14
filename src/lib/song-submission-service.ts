@@ -3,7 +3,7 @@ import { isHQGroup } from '@/config/zones'
 
 const SONGS_COLLECTION = 'songs'
 const SUBMITTED_SONGS_COLLECTION = 'submitted_songs'
-const SONG_NOTIFICATIONS_COLLECTION = 'song_notifications'
+const SONG_NOTIFICATIONS_COLLECTION = 'notifications'
 
 export interface ConversationMessage {
   id: string
@@ -63,6 +63,16 @@ export interface SongNotification {
   read: boolean
   createdAt: string
   timestamp: any
+  // Unified notification fields
+  target_audience?: string
+  target_user_id?: string
+  target_zones?: string[]
+  target_group?: string
+  category?: string
+  priority?: string
+  title?: string
+  action_url?: string
+  created_at?: string
 }
 
 export async function submitSong(songData: Omit<SongSubmission, 'id' | 'status' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; id?: string; error?: string }> {
@@ -98,13 +108,18 @@ async function createSubmissionNotification(
 ): Promise<void> {
   try {
     const notificationData = {
+      target_audience: 'all',
+      category: 'song',
+      priority: 'medium',
+      title: 'New Song Submission',
       songId,
       songTitle,
       submittedBy: submittedBy.userName,
       submittedByEmail: submittedBy.email,
-      type: 'new_submission',
+      type: 'info',
       message: `New song "${songTitle}" submitted by ${submittedBy.userName}${zoneName ? ` from ${zoneName}` : ''}`,
       read: false,
+      created_at: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       timestamp: FieldValue.serverTimestamp(),
       zoneId: zoneId || 'unknown',
@@ -289,6 +304,11 @@ async function createStatusNotification(
 ): Promise<void> {
   try {
     const notificationData: Omit<SongNotification, 'id'> = {
+      target_audience: 'individual',
+      target_user_id: submittedBy.userId,
+      category: 'song',
+      priority: status === 'rejected' ? 'medium' : 'high',
+      title: status === 'approved' ? 'Song Approved!' : status === 'rejected' ? 'Song Feedback' : 'Song Update',
       songId,
       songTitle,
       submittedBy: submittedBy.userName,
@@ -296,6 +316,7 @@ async function createStatusNotification(
       type: status,
       message: customMessage || `Your song "${songTitle}" has been ${status}`,
       read: false,
+      created_at: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       timestamp: FieldValue.serverTimestamp()
     }

@@ -25,7 +25,11 @@ export async function GET(request: NextRequest) {
     at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
 
     const token = await at.toJwt();
-    return NextResponse.json({ token });
+    // Return both the token AND the server URL. This prevents the mobile app from hardcoding the URL.
+    return NextResponse.json({ 
+      token, 
+      url: process.env.LIVEKIT_URL || '' 
+    });
   } catch (error) {
     console.error('Error generating LiveKit token:', error);
     return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });

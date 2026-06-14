@@ -813,8 +813,8 @@ export class FirebaseDatabaseService {
 
   static async getUserNotifications(userId: string) {
     try {
-      const snapshot = await db.collection('admin_messages')
-        .orderBy('createdAt', 'desc')
+      const snapshot = await db.collection('notifications')
+        .orderBy('created_at', 'desc')
         .limit(50)
         .get()
       

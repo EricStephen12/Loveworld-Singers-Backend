@@ -1,4 +1,4 @@
-﻿import {
+import {
   collection,
   doc,
   addDoc,
@@ -37,8 +37,8 @@ function invalidateCache(zoneId?: string): void {
 }
 
 function getMessagesCollectionName(zoneId?: string): string {
-  // All admin messages are global now
-  return 'admin_messages'
+  // All admin messages are routed to the centralized notifications collection
+  return 'notifications'
 }
 
 export interface AdminMessage {
@@ -62,10 +62,16 @@ export async function sendMessageToAllUsers(
     const messageData = {
       title: title.trim(),
       message: message.trim(),
-      sentBy: adminUsername,
+      sender_name: adminUsername, // Standard schema
+      sentBy: adminUsername, // Legacy support
       sentAt: new Date().toISOString(),
+      created_at: new Date().toISOString(), // Standard schema
       zoneId: 'global', // Always global now
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      target_audience: 'all', // Send to everyone
+      category: 'admin',
+      type: 'info',
+      priority: 'high'
     }
 
     const messagesRef = collection(db, collectionName)
@@ -147,19 +153,21 @@ export async function getAllMessages(zoneId?: string, forceRefresh = false): Pro
     const collectionName = getMessagesCollectionName(zoneId)
     const messagesRef = collection(db, collectionName)
 
-    const q = query(messagesRef, orderBy('createdAt', 'desc'))
+    const q = query(messagesRef, where('category', '==', 'admin'))
 
     const snapshot = await getDocs(q)
 
-    const messages = snapshot.docs.map((docSnap) => {
+    let messages = snapshot.docs.map((docSnap) => {
       const data = docSnap.data()
       return {
         ...data,
         id: docSnap.id,
-        sentAt: data.sentAt || new Date().toISOString(),
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+        sentAt: data.sentAt || data.created_at || new Date().toISOString(),
+        createdAt: data.createdAt?.toDate?.()?.toISOString() || data.created_at || new Date().toISOString()
       }
     }) as AdminMessage[]
+
+    messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     messagesCache.set(cacheKey, { data: messages, timestamp: Date.now() })
 

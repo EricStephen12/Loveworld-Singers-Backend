@@ -3,364 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-      
-
-    // ===== SUPER SIMPLE RULES (Almost like test mode!) =====
-    // NOTE: Admin panel uses localStorage (not Firebase Auth)
-    // So we keep collections open for admin to work properly
-
-
-    // ===== PROFILES =====
-    match /profiles/{userId} {
-      // Allow reads for all (needed for KingsChat login flow on mobile where
-      // the user queries profiles by kingschat_id BEFORE being authenticated)
-      allow read: if true;
-      // Only the user themselves can edit their profile, or an HQ admin
-      allow write: if request.auth != null && (
-        request.auth.uid == userId || 
-        request.auth.token.email in [
-          'ihenacho23@gmail.com', 
-          'ephraimloveworld1@gmail.com', 
-          'takeshopstores@gmail.com', 
-          'nnennawealth@gmail.com',
-          'joykures@gmail.com',
-          'styleirech@gmail.com'
-        ]
-      );
-    }
-
-	match /user_sessions/{uid} {
-  allow read, write: if request.auth != null && request.auth.uid == uid;
-}
-
-    // ===== PRAISE NIGHTS (Events) =====
-    match /praise_nights/{praiseNightId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-
-    // ===== SONGS (Old - Deprecated) =====
-    match /songs/{songId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-
-    // ===== PRAISE NIGHT SONGS (Current) =====
-    match /praise_night_songs/{songId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-
-    // ===== ADMIN MESSAGES =====
-    match /admin_messages/{messageId} {
-      allow read: if request.auth != null;
-      allow create, delete: if true;
-      allow update: if false;
-    }
-
-
-    // ===== COMMENTS =====
-    match /comments/{commentId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-
-    // ===== CATEGORIES =====
-    match /categories/{categoryId} {
-      allow read: if true;  // Anyone can read
-      allow write: if true;  // Open for admin panel
-    }
-    
-        // ===== ZONES COLLECTION =====
-    match /zones/{zoneId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for zone creation
-    }
-
-    // ===== USER FAVORITES =====
-    match /favorites/{favoriteId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // ===== FRIEND REQUESTS =====
-    match /friend_requests/{requestId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // ===== WATCH HISTORY =====
-    match /watch_history/{historyId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // ===== USER PREFERENCES =====
-    match /user_preferences/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // ===== SOCIAL FEATURES =====
-    match /user_connections/{connectionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /user_activity/{activityId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-      // ===== ZONE-SPECIFIC COLLECTIONS =====
-    match /zone_songs/{songId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-    match /zone_praise_nights/{praiseNightId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-    match /zone_categories/{categoryId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-    match /zone_page_categories/{pageCategoryId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-    match /zone_song_history/{historyId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-    match /zone_cloudinary_media/{mediaId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for media management
-    }
-
-    match /zone_notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for notifications
-    }
-
-    match /zone_analytics/{analyticsId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for analytics
-    }
-
-    match /zone_comments/{commentId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for comments
-    }
-
-    match /zone_admin_messages/{messageId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin messages
-    }
-
-    match /zone_user_groups/{groupId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for zone groups
-    }
-
-    match /zone_attendance/{attendanceId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for attendance tracking
-    }
-
-    match /zone_achievements/{achievementId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for achievements
-    }
-                  // ===== ZONE MEMBERS =====
-    match /zone_members/{memberId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-    
-    match /video-upload/{docId} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null;
-      allow delete: if request.auth != null;
-    }
-    
-    
-
-    // ===== SUBMITTED SONGS (Current) =====
-    match /submitted_songs/{submissionId} {
-      // Users can read their own submissions
-      allow read: if request.auth != null && 
-                     (resource.data.submittedBy.userId == request.auth.uid || true);
-      // Authenticated users can create submissions
-      allow create: if request.auth != null && 
-                       request.resource.data.submittedBy.userId == request.auth.uid;
-      // Admins can update (approve/reject/reply) - open for admin panel
-      allow update: if request.auth != null;
-      // Admins can delete - open for admin panel
-      allow delete: if request.auth != null;
-    }
-
-    // ===== SONG NOTIFICATIONS =====
-    match /song_notifications/{notificationId} {
-      // Users can read notifications about their submissions
-      allow read: if request.auth != null;
-      // System can create notifications (when songs are submitted/approved/rejected)
-      allow create: if request.auth != null;
-      // Users can update their own notifications (mark as read)
-      allow update: if request.auth != null;
-      // Admins can delete notifications
-      allow delete: if request.auth != null;
-    }
-
-    // ===== MEDIA COLLECTION =====
-    match /media/{mediaId} {
-      // Anyone can read media (for public viewing)
-      allow read: if true;
-      // Authenticated users can create/update/delete (admin uploads)
-      allow write: if request.auth != null;
-    }
-
-    // ===== MEDIA GENRES =====
-    match /media_genres/{genreId} {
-      allow read: if true;  // Anyone can read genres
-      allow write: if request.auth != null;  // Admins can manage genres
-    }
-
-    // ===== WATCH HISTORY =====
-    match /watch_history/{historyId} {
-      // Users can only read/write their own watch history
-      allow read, write: if request.auth != null && 
-                            (resource == null || resource.data.userId == request.auth.uid);
-    }
-
-    // ===== USER FAVORITES =====
-    match /user_favorites/{favoriteId} {
-      // Users can only read/write their own favorites
-      allow read, write: if request.auth != null && 
-                            (resource == null || resource.data.userId == request.auth.uid);
-    }
-
-    // ===== VIDEO UPLOAD QUEUE (HQ Admin) =====
-    match /video-upload/{docId} {
-      // Read-only dashboards (recent uploads list) need to be available
-      allow read: if request.auth != null;
-
-      // Create/update can only happen from authenticated HQ admins
-      allow create, update: if request.auth != null;
-
-      // Deletes are restricted to authenticated users as well
-      allow delete: if request.auth != null;
-    }
-
-
-
-    // ===== HQ MEMBERS =====
-    match /hq_members/{memberId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
-    }
-
-
-
-    // ===== PAGE CATEGORIES =====
-    match /page_categories/{pageCategoryId} {
-      allow read: if true;  // Anyone can read
-      allow write: if true;  // Open for admin panel
-    }
-    // ===== SOCIAL & MESSAGING COLLECTIONS =====
-
-    match /groups/{groupId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /group_posts/{postId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /notifications/{notificationId} {
-      allow read: if true;  // Open for API to create notifications
-      allow write: if true;  // Open for API to create notifications
-    }
-
-    // ===== FCM TOKENS (Push notification tokens) =====
-    match /fcm_tokens/{tokenId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Allow API to save tokens
-    }
-
-    match /conversations/{conversationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /messages/{messageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /attendance/{attendanceId} {
-      allow read: if request.auth != null;
-      allow write: if true;
-    }
-
-    match /achievements/{achievementId} {
-      allow read: if request.auth != null;
-      allow write: if true;
-    }
-
-    match /cloudinary_media/{mediaId} {
-      allow read: if request.auth != null;
-      allow write: if true;
-    }
-
-    match /voice_messages/{voiceId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    match /webrtc_sessions/{sessionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-      match /push_notifications/{notificationId} {
-      allow read: if true;  // Anyone can read push notifications
-      allow write: if true;  // Open for system to create notifications
-    }
-    
-    	match /admin_users/{adminId} {
-  		allow read: if true;  // Open for admin panel
- 		  allow write: if true;  // Open for admin panel to manage admins
-		}
-    
-     // ===== KINGSCHAT AUTH SESSIONS (for OAuth flow) =====
-    match /kingschat_auth_sessions/{sessionId} {
-      allow read, write: if true;  // Allow reading/writing auth sessions
-    }
-    
-    // ===== USER NOTIFICATIONS =====
-    match /user_notifications/{notificationId} {
-      allow read: if request.auth != null;
-      allow create: if true;  // Allow system/API to create notifications
-      allow update: if request.auth != null;  // Users can mark as read
-      allow delete: if request.auth != null;
-    }
-
-
-  // ===== WHATSAPP-STYLE CHAT SYSTEM =====
-
-    // Helper functions for chat security
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -377,477 +22,483 @@ service cloud.firestore {
       return request.auth.uid in chatData.admins;
     }
 
-    // Legacy chats (backward compatibility)
-    match /chats/{chatId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (request.auth.uid == resource.data.admin ||
-        request.auth.uid in resource.data.participants);
-      allow delete: if request.auth != null && request.auth.uid == resource.data.admin;
+    function isHQAdmin() {
+      return request.auth.token.email in [
+        'ihenacho23@gmail.com', 
+        'ephraimloveworld1@gmail.com', 
+        'takeshopstores@gmail.com', 
+        'nnennawealth@gmail.com',
+        'joykures@gmail.com',
+        'styleirech@gmail.com'
+      ];
     }
 
-    // Legacy messages (backward compatibility)
-    match /messages/{messageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // =========================================================================
+    // USERS, PROFILES & PRESENCE
+    // =========================================================================
+    match /profiles/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (isOwner(userId) || isHQAdmin());
     }
 
-    // ===== NEW CHAT SYSTEM V2 =====
-    // Chats V2 (new clean chat system)
-    match /chats_v2/{chatId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    match /user_sessions/{uid} {
+      allow read, write: if isAuthenticated() && isOwner(uid);
     }
 
-    // Messages V2 (new clean messages)
-    match /messages_v2/{messageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    match /kingschat_auth_sessions/{sessionId} {
+      allow read, write: if true;
     }
 
-    // Legacy chat users (backward compatibility)
-    match /chat_users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    match /user_preferences/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
     }
 
-    // WhatsApp Users (new schema) - MIGRATION FRIENDLY
-    match /whatsapp_users/{userId} {
+    match /user_connections/{connectionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /user_activity/{activityId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /friend_requests/{requestId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /presence/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Allow any authenticated user during migration
+      allow write: if isAuthenticated() && isOwner(userId);
     }
 
-    // WhatsApp Chats (new schema) - MIGRATION FRIENDLY  
-    match /whatsapp_chats/{chatId} {
+    match /admin_users/{adminId} {
+      allow read, write: if true;
+    }
+
+    match /hq_members/{memberId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Allow any authenticated user during migration
-    }
-
-    // WhatsApp Messages (new schema) - MIGRATION FRIENDLY
-    match /whatsapp_messages/{messageId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Allow any authenticated user during migration
-    }
-
-    // WhatsApp Contacts
-    match /whatsapp_contacts/{contactId} {
-      allow read, write: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid;
-    }
-
-    // WhatsApp Starred Messages
-    match /whatsapp_starred_messages/{starId} {
-      allow read, write: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid;
-    }
-
-    // WhatsApp Broadcasts
-    match /whatsapp_broadcasts/{broadcastId} {
-      allow read: if isAuthenticated() && 
-        (resource.data.createdBy == request.auth.uid || 
-         request.auth.uid in resource.data.recipients);
-      allow write: if isAuthenticated() && 
-        resource.data.createdBy == request.auth.uid;
-    }
-
-    // WhatsApp Media Uploads
-    match /whatsapp_media_uploads/{uploadId} {
-      allow read, write: if isAuthenticated() && 
-        resource.data.uploadedBy == request.auth.uid;
-    }
-
-        // ===== NETFLIX-STYLE MEDIA COLLECTIONS (ADD THESE) =====
-
-    // Main Media Collection (for Netflix-style videos)
-    match /media/{mediaId} {
-      // Allow read access to all authenticated users
-      allow read: if request.auth != null;
-
-      // Allow write access only to HQ Admins
-      allow create, update, delete: if request.auth != null 
-        && request.auth.token.email in [
-          'ihenacho23@gmail.com', 
-          'ephraimloveworld1@gmail.com',
-          'takeshopstores@gmail.com',
-          'nnennawealth@gmail.com'
-        ];
-    }
-
-    // Media Videos Collection (unified video management)
-    match /media_videos/{videoId} {
-      // Anyone authenticated can read videos
-      allow read: if request.auth != null;
-
-      // Allow authenticated users to create, update, delete (admin panel uses localStorage)
-      allow create, update, delete: if request.auth != null;
-    }
-
-    // Media Analytics Collection (for views, likes, etc.)
-    match /media_analytics/{analyticsId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Media Comments Collection
-    match /media_comments/{commentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null 
-        && (request.auth.uid == resource.data.userId 
-            || request.auth.token.email in [
-              'ihenacho23@gmail.com', 
-              'ephraimloveworld1@gmail.com',
-              'takeshopstores@gmail.com',
-              'nnennawealth@gmail.com'
-            ]);
-    }
-
-    // User Watch History (Netflix-style)
-    match /user_watch_history/{userId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == userId;
-    }
-
-    // User Favorites (Netflix-style)
-    match /user_favorites/{userId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == userId;
-    }
-
-    // ===== MEDIA PLAYLISTS (User playlists, Liked Videos, Watch Later) =====
-    match /media_playlists/{playlistId} {
-      // Users can read their own playlists or public playlists
-      allow read: if request.auth != null;
-      // Users can create playlists for themselves
-      allow create: if request.auth != null;
-      // Users can update/delete their own playlists
-      allow update, delete: if request.auth != null;
-    }
-
-    // ===== MEDIA CHANNELS =====
-    match /media_channels/{channelId} {
-      // Anyone authenticated can read channels
-      allow read: if request.auth != null;
-
-      // Only HQ Admins can create/delete channels
-      allow create, delete: if request.auth != null 
-        && request.auth.token.email in [
-          'ihenacho23@gmail.com', 
-          'ephraimloveworld1@gmail.com',
-          'takeshopstores@gmail.com',
-          'nnennawealth@gmail.com',
-          'joykures@gmail.com',
-          'styleirech@gmail.com'
-        ];
-
-      // Update rules:
-      // - HQ Admins can update any field.
-      // - Any authenticated user can update subscriberCount or videoCount (for subscribing/unsubscribing and video counts).
-      allow update: if request.auth != null && (
-        (request.auth.token.email in [
-          'ihenacho23@gmail.com', 
-          'ephraimloveworld1@gmail.com',
-          'takeshopstores@gmail.com',
-          'nnennawealth@gmail.com',
-          'joykures@gmail.com',
-          'styleirech@gmail.com'
-        ]) || (
-          // Allow incrementing/decrementing subscriberCount/videoCount
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriberCount', 'videoCount', 'updatedAt'])
-        )
-      );
-    }
-
-    // ===== CHANNEL SUBSCRIPTIONS =====
-    match /channel_subscriptions/{subId} {
-      // Anyone authenticated can read subscriptions (usually users check their own)
-      allow read: if request.auth != null;
-
-      // Users can only create subscriptions for themselves
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-
-      // Users can delete their own subscriptions
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-
-    // ===== MEDIA CATEGORIES (Dynamic video categories) =====
-    match /media_categories/{categoryId} {
-      allow read: if true;  // Anyone can read categories
-      allow write: if true;  // Open for admin panel
-    }
-
-    // ===== ADMIN PLAYLISTS (Curated playlists by admin) =====
-    match /admin_playlists/{playlistId} {
-      allow read: if true;  // Anyone can read public playlists
-      allow write: if true;  // Open for admin panel
-    }
-
- // ===== SONG HISTORY =====
-    match /song_history/{historyId} {
-      allow read: if true;  // Anyone can read history
-      allow write: if true;  // Open for admin panel
-    }
-
-
-
-    // ===== USER GROUPS =====
-    match /user_groups/{groupId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // ===== SONG SUBMISSIONS =====
-    match /song_submissions/{submissionId} {
-      allow read: if true;  // Anyone can read (for admin review)
-      allow create: if request.auth != null;  // Authenticated users can submit
-      allow update, delete: if true;  // Open for admin panel
-    }
-
-    // ===== MASTER LIBRARY (Central Song Repository) =====
-    match /master_library/{songId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to manage master songs
-    }
-
-    // ===== MASTER PROGRAMS (Song Collections) =====
-    match /master_programs/{programId} {
-      allow read: if request.auth != null;
       allow write: if true;
     }
 
-    // ===== MASTER SONGS (HQ Published Songs for AudioLab) =====
-    match /master_songs/{songId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to publish songs
+    // =========================================================================
+    // UNIFIED NOTIFICATIONS
+    // =========================================================================
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.target_audience != 'individual' || 
+        resource.data.target_user_id == request.auth.uid || 
+        resource.data.sender_id == request.auth.uid
+      );
+      allow create, update, delete: if isAuthenticated();
     }
 
-    // ===== AUDIOLAB COLLECTIONS =====
-    
-    // AudioLab Songs (Zone-specific songs - future use)
+    match /user_notifications/{readStateId} {
+      allow read, write: if isAuthenticated() && 
+        (resource == null || resource.data.user_id == request.auth.uid) &&
+        (request.resource == null || request.resource.data.user_id == request.auth.uid);
+    }
+
+    match /push_notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    match /fcm_tokens/{tokenId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    // =========================================================================
+    // CHAT V2, CALLS & WEBRTC
+    // =========================================================================
+    match /chats_v2/{chatId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /messages_v2/{messageId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /typing_v2/{documentId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /calls_v2/{callId} {
+      allow read, write: if isAuthenticated();
+      match /{document=**} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    match /statuses_v2/{statusId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers', 'likes']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /media_doodles/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /support_messages/{messageId} {
+      allow read, create: if isAuthenticated() && (request.resource.data.chatId == request.auth.uid || resource.data.chatId == request.auth.uid || isHQAdmin());
+      allow update, delete: if isAuthenticated() && isHQAdmin();
+    }
+
+    // =========================================================================
+    // MEDIA, VIDEO & NETFLIX-STYLE FEATURES
+    // =========================================================================
+    match /media/{mediaId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated() && isHQAdmin();
+    }
+
+    match /media_videos/{videoId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /video-upload/{docId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /cloudinary_media/{mediaId} {
+      allow read, write: if isAuthenticated() || true;
+    }
+
+    match /media_genres/{genreId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /media_categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /media_analytics/{analyticsId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /media_comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isHQAdmin());
+    }
+
+    match /watch_history/{historyId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    match /user_watch_history/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    match /favorites/{favoriteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /user_favorites/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    match /user_playlists/{playlistId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /media_playlists/{playlistId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /admin_playlists/{playlistId} {
+      allow read, write: if true;
+    }
+
+    match /media_channels/{channelId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAuthenticated() && isHQAdmin();
+      allow update: if isAuthenticated() && (
+        isHQAdmin() || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriberCount', 'videoCount', 'updatedAt'])
+      );
+    }
+
+    match /channel_subscriptions/{subId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // MUSIC & AUDIOLAB
+    // =========================================================================
+    match /master_library/{songId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /master_programs/{programId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /master_songs/{songId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /submitted_songs/{submissionId} {
+      allow read: if isAuthenticated() && (resource.data.submittedBy.userId == request.auth.uid || true);
+      allow create: if isAuthenticated() && request.resource.data.submittedBy.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated();
+    }
+
+    match /song_history/{historyId} {
+      allow read, write: if true;
+    }
+
+    match /song_ministries/{ministryId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /song_ministry_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /song_ministry_summaries/{summaryId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /ministered_songs/{ministeredId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
     match /audiolab_playlists/{playlistId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com']);
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isHQAdmin());
     }
 
     match /audiolab_songs/{songId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // AudioLab Projects (Multi-track recording projects)
     match /audiolab_projects/{projectId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;  // Users can manage their own projects
+      allow read, write: if isAuthenticated();
     }
 
-    // AudioLab Progress (User practice progress)
     match /audiolab_progress/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isOwner(userId);
     }
 
-    // AudioLab Sessions (Practice sessions)
     match /audiolab_sessions/{sessionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read, write: if isAuthenticated();
     }
 
-    // ===== SUBGROUPS (Zone Subgroups/Teams) =====
+    // =========================================================================
+    // ZONES, SUBGROUPS & EVENTS
+    // =========================================================================
+    match /zones/{zoneId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /zone_members/{memberId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /zone_user_groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
     match /subgroups/{subgroupId} {
-      allow read: if request.auth != null;  // All authenticated users can read (for discovery)
-      allow write: if true;  // Open for admin panel to manage subgroups
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // Sub-Group Songs
-    match /subgroup_songs/{songId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Managed by subgroup coordinator
-    }
-
-    // Sub-Group Rehearsals
-    match /subgroup_praise_nights/{rehearsalId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Managed by subgroup coordinator
-    }
-
-    // ===== SUBGROUP MEMBERS =====
     match /subgroup_members/{memberId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to manage subgroup members
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== MINISTERED SONGS (Songs that have been ministered/performed) =====
-    match /ministered_songs/{ministeredId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to track ministered songs
+    match /subgroup_songs/{songId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== SONG MINISTRY HISTORY (Track when/where songs were ministered) =====
-    match /song_ministry_history/{historyId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to track ministry history
+    match /subgroup_praise_nights/{rehearsalId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== CALENDAR EVENTS (For rehearsals, performances, etc.) =====
+    match /groups/{groupId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /group_posts/{postId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /praise_nights/{praiseNightId} {
+      allow read, write: if true;
+    }
+
+    match /praise_night_songs/{songId} {
+      allow read, write: if true;
+    }
+
     match /calendar_events/{eventId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to manage events
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== EVENT ATTENDEES (Calendar event attendees) =====
     match /event_attendees/{attendeeId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to manage attendees
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== BIRTHDAYS (Member birthdays) =====
     match /birthdays/{birthdayId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to manage birthdays
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== UPCOMING EVENTS (Ministry events for calendar) =====
     match /upcoming_events/{eventId} {
-      allow read: if true;  // Anyone can read upcoming events
-      allow write: if true;  // Open for admin panel to manage events
+      allow read, write: if true;
     }
 
-
-    // ===== ACTIVITY LOGS (Admin activity tracking) =====
-    match /activity_logs/{logId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow create: if request.auth != null;  // Authenticated users can create logs
-      allow update, delete: if false;  // No updates or deletes - immutable logs
-    }
-    
-    // ===== SIMPLIFIED ANALYTICS (New simplified analytics collection) =====
-    match /simplified_analytics/{analyticsId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel and API to write analytics
-    }
-    
-    // ===== SONG MINISTRIES (Manual tracking of songs ministered) =====
-    match /song_ministries/{ministryId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for admin panel to track song ministries
-    }
-    
-    // ===== SONG MINISTRY SUMMARIES (Pre-aggregated monthly data) =====
-    match /song_ministry_summaries/{summaryId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if true;  // Open for API to write aggregated data
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== SYSTEM METADATA (Real-time sync triggers) =====
-    match /sys_metadata/{zoneId} {
-      allow read: if request.auth != null;  // All authenticated users can read
-      allow write: if request.auth != null;  // Authenticated users can write metadata for real-time sync
-      
-      // Nested metadata documents
-      match /{metadataType}/{docId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null;
-      }
+    match /achievements/{achievementId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-    // ===== INDIVIDUAL SUBSCRIPTIONS (Global) =====
-    match /individual_subscriptions/{subscriptionId} {
-      allow read: if request.auth != null && (subscriptionId == request.auth.uid || resource.data.userId == request.auth.uid);
-      allow write: if request.auth != null && (subscriptionId == request.auth.uid || request.resource.data.userId == request.auth.uid);
-    }
-
-    // ===== SUPPORT MESSAGES (Support Chat) =====
-    match /support_messages/{messageId} {
-      // Users can only read/create messages in their own thread
-      allow read: if request.auth != null && (resource.data.chatId == request.auth.uid || request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com']);
-      allow create: if request.auth != null && (request.resource.data.chatId == request.auth.uid || request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com']);
-      
-      // Admins can manage all messages (update/delete)
-      allow update, delete: if request.auth != null && request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com'];
-    }
-
-    // ===== PAYMENT TRACKING SYSTEM =====
-    
-    // Payment Records (Detailed payment information)
-    // Payment Records (Detailed payment information)
-    match /payment_records/{paymentId} {
-      // Allow read/create for system/server compatibility
-      allow read, create: if true;
-      allow update, delete: if request.auth != null;
-    }
-
-    // Subscription Audit Logs (Immutable audit trail)
-    match /subscription_audit_logs/{logId} {
-      allow read, create: if true;
-      allow update: if false;
-      allow delete: if request.auth != null; // HQ admin can delete if needed
-    }
-
-    // Zone Subscriptions (Zone-level subscriptions)
-    match /zone_subscriptions/{zoneId} {
-      // Zone members can read their zone's subscription
-      allow read: if request.auth != null;
-      // Only system/webhook and HQ admins can write
-      allow write: if true;  // Allow webhook and admin to manage
-    }
-
-    // Payments Collection (KingsPay webhook data)
-    match /payments/{paymentId} {
-      // HQ admins can read all payments
-      allow read: if request.auth != null && 
-                     request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com', 'joykures@gmail.com'];
-      // Only webhook can create payments
-      allow create: if true;  // Allow webhook to create
-      // HQ admins can update/delete
-      allow update, delete: if request.auth != null && 
-                               request.auth.token.email in ['ihenacho23@gmail.com', 'ephraimloveworld1@gmail.com', 'takeshopstores@gmail.com', 'nnennawealth@gmail.com', 'joykures@gmail.com'];
-    }
-
-    // ===== SCHEDULE MANAGER =====
     match /schedule_categories/{categoryId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
     match /schedule_songs/{songId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
-    
+
     match /schedule_programs/{programId} {
-      allow read: if request.auth != null;
-      allow write: if true;  // Open for admin panel
+      allow read: if isAuthenticated();
+      allow write: if true;
     }
 
-        // Status V2 (WhatsApp-style stories)
-    match /statuses_v2/{statusId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers', 'likes'])
-      );
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    // Zone specific modules
+    match /zone_songs/{songId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_praise_nights/{praiseNightId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_categories/{categoryId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_page_categories/{pageCategoryId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_song_history/{historyId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_cloudinary_media/{mediaId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_notifications/{notificationId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_analytics/{analyticsId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_comments/{commentId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_admin_messages/{messageId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_attendance/{attendanceId} { allow read: if isAuthenticated(); allow write: if true; }
+    match /zone_achievements/{achievementId} { allow read: if isAuthenticated(); allow write: if true; }
+
+    // =========================================================================
+    // PAYMENTS & SUBSCRIPTIONS
+    // =========================================================================
+    match /payment_records/{paymentId} {
+      allow read, create: if true;
+      allow update, delete: if isAuthenticated();
     }
 
-
-    // ===== PRESENCE SYSTEM =====
-    match /presence/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    match /subscription_audit_logs/{logId} {
+      allow read, create: if true;
+      allow update: if false;
+      allow delete: if isAuthenticated();
     }
 
-    
-    // ===== WEBRTC CALLS =====
-    match /calls_v2/{callId} {
-      allow read, write: if request.auth != null;
-      
-      match /{document=**} {
-        allow read, write: if request.auth != null;
+    match /zone_subscriptions/{zoneId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /payments/{paymentId} {
+      allow read, update, delete: if isAuthenticated() && isHQAdmin();
+      allow create: if true;
+    }
+
+    match /individual_subscriptions/{subscriptionId} {
+      allow read, write: if isAuthenticated() && (subscriptionId == request.auth.uid || resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+    }
+
+    // =========================================================================
+    // LEGACY & MIGRATION CHAT (WHATSAPP)
+    // =========================================================================
+    match /chats/{chatId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /messages/{messageId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /chat_users/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /whatsapp_users/{userId} { allow read, write: if isAuthenticated(); }
+    match /whatsapp_chats/{chatId} { allow read, write: if isAuthenticated(); }
+    match /whatsapp_messages/{messageId} { allow read, write: if isAuthenticated(); }
+    match /whatsapp_contacts/{contactId} { allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid; }
+    match /whatsapp_starred_messages/{starId} { allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid; }
+    match /whatsapp_broadcasts/{broadcastId} { 
+      allow read: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || request.auth.uid in resource.data.recipients);
+      allow write: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+    }
+    match /whatsapp_media_uploads/{uploadId} { allow read, write: if isAuthenticated() && resource.data.uploadedBy == request.auth.uid; }
+
+    // =========================================================================
+    // OTHER / SYSTEM / DEPRECATED
+    // =========================================================================
+    match /sys_metadata/{zoneId} {
+      allow read, write: if isAuthenticated();
+      match /{metadataType}/{docId} {
+        allow read, write: if isAuthenticated();
       }
     }
 
-    // ===== DEFAULT DENY ALL =====
+    match /activity_logs/{logId} {
+      allow read, create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    match /simplified_analytics/{analyticsId} {
+      allow read: if isAuthenticated();
+      allow write: if true;
+    }
+
+    match /songs/{songId} { allow read, write: if true; }
+    match /admin_messages/{messageId} { allow read: if isAuthenticated(); allow create, delete: if true; allow update: if false; }
+    match /song_notifications/{notificationId} { allow read, create, update, delete: if isAuthenticated(); }
+    match /comments/{commentId} { allow read, write: if isAuthenticated(); }
+    match /categories/{categoryId} { allow read, write: if true; }
+    match /page_categories/{pageCategoryId} { allow read, write: if true; }
+    match /voice_messages/{voiceId} { allow read, write: if isAuthenticated(); }
+    match /webrtc_sessions/{sessionId} { allow read, write: if isAuthenticated(); }
+    match /conversations/{conversationId} { allow read, write: if isAuthenticated(); }
+
+    // =========================================================================
+    // DEFAULT DENY ALL
+    // =========================================================================
     match /{document=**} {
       allow read, write: if false;
     }
