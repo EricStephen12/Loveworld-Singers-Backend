@@ -83,15 +83,21 @@ service cloud.firestore {
     // UNIFIED NOTIFICATIONS
     // =========================================================================
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (
-        resource.data.target_audience != 'individual' || 
-        resource.data.target_user_id == request.auth.uid || 
-        resource.data.sender_id == request.auth.uid
-      );
+      // NOTE: The React Native app downloads the stream and filters in-memory.
+      // Therefore, this rule must remain open for all authenticated users.
+      // To strictly secure this in the future, the mobile app must split its queries
+      // by target_audience instead of doing a global orderBy query.
+      allow read: if isAuthenticated();
       allow create, update, delete: if isAuthenticated();
     }
 
     match /user_notifications/{readStateId} {
+      allow read, write: if isAuthenticated() && 
+        (resource == null || resource.data.user_id == request.auth.uid) &&
+        (request.resource == null || request.resource.data.user_id == request.auth.uid);
+    }
+
+    match /user_groups/{groupId} {
       allow read, write: if isAuthenticated() && 
         (resource == null || resource.data.user_id == request.auth.uid) &&
         (request.resource == null || request.resource.data.user_id == request.auth.uid);
@@ -385,17 +391,17 @@ service cloud.firestore {
 
     match /schedule_categories/{categoryId} {
       allow read: if isAuthenticated();
-      allow write: if true;
+      allow write: if isAuthenticated();
     }
 
     match /schedule_songs/{songId} {
       allow read: if isAuthenticated();
-      allow write: if true;
+      allow write: if isAuthenticated();
     }
 
     match /schedule_programs/{programId} {
       allow read: if isAuthenticated();
-      allow write: if true;
+      allow write: if isAuthenticated();
     }
 
     // Zone specific modules
