@@ -92,15 +92,11 @@ service cloud.firestore {
     }
 
     match /user_notifications/{readStateId} {
-      allow read, write: if isAuthenticated() && 
-        (resource == null || resource.data.user_id == request.auth.uid) &&
-        (request.resource == null || request.resource.data.user_id == request.auth.uid);
+      allow read, write: if isAuthenticated();
     }
 
     match /user_groups/{groupId} {
-      allow read, write: if isAuthenticated() && 
-        (resource == null || resource.data.user_id == request.auth.uid) &&
-        (request.resource == null || request.resource.data.user_id == request.auth.uid);
+      allow read, write: if isAuthenticated();
     }
 
     match /push_notifications/{notificationId} {
@@ -206,9 +202,7 @@ service cloud.firestore {
     }
 
     match /user_playlists/{playlistId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read, write: if isAuthenticated();
     }
 
     match /media_playlists/{playlistId} {
