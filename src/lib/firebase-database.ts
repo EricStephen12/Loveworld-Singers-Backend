@@ -486,6 +486,88 @@ export class FirebaseDatabaseService {
         return;
       }
 
+      // Resolve the actual program/rehearsal document containing this song
+      let programData: any = undefined;
+      try {
+        if (collectionName === 'subgroup_songs') {
+          const subGroupId = song.subGroupId;
+          if (subGroupId) {
+            const programsSnap = await db.collection('subgroup_praise_nights')
+              .where('subGroupId', '==', subGroupId)
+              .get();
+
+            let targetDoc = programsSnap.docs.find(d => {
+              const data = d.data();
+              return Array.isArray(data.songIds) && data.songIds.includes(songId);
+            });
+
+            if (!targetDoc && !programsSnap.empty) {
+              targetDoc = programsSnap.docs[0];
+            }
+
+            if (targetDoc) {
+              const dData = targetDoc.data();
+              programData = {
+                id: targetDoc.id,
+                subGroupId: subGroupId,
+                scope: 'subgroup',
+                name: dData.name || dData.title || 'Ongoing Subgroup Rehearsal',
+                songIds: dData.songIds || []
+              };
+            } else {
+              // High fidelity fallback if no program doc contains this song
+              programData = {
+                id: `subgroup-fallback-${subGroupId}`,
+                subGroupId: subGroupId,
+                scope: 'subgroup',
+                name: 'Ongoing Subgroup Rehearsal',
+                songIds: [songId] // include this song so it shows up in UI list!
+              };
+            }
+          }
+        } else {
+          const zoneId = song.zoneId;
+          if (zoneId) {
+            const { isHQGroup } = await import('@/config/zones');
+            const isHQ = isHQGroup(zoneId);
+            const programCol = isHQ ? 'praise_nights' : 'zone_praise_nights';
+
+            const programsSnap = await db.collection(programCol)
+              .where('zoneId', '==', zoneId)
+              .get();
+
+            let targetDoc = programsSnap.docs.find(d => {
+              const data = d.data();
+              return Array.isArray(data.songIds) && data.songIds.includes(songId);
+            });
+
+            if (!targetDoc && !programsSnap.empty) {
+              targetDoc = programsSnap.docs[0];
+            }
+
+            if (targetDoc) {
+              const dData = targetDoc.data();
+              programData = {
+                id: targetDoc.id,
+                zoneId: zoneId,
+                name: dData.name || dData.title || 'Ongoing Rehearsal',
+                songIds: dData.songIds || []
+              };
+            } else {
+              // High fidelity fallback if no program doc contains this song
+              programData = {
+                id: `zonal-fallback-${zoneId}`,
+                zoneId: zoneId,
+                name: 'Ongoing Rehearsal',
+                songIds: [songId] // include this song so it shows up in UI list!
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Push Notification] Error resolving real program:', err);
+      }
+
       console.log(`[Push Notification] Sending push notification to ${tokens.length} users...`);
 
       const messages = tokens.map(token => ({
@@ -493,7 +575,15 @@ export class FirebaseDatabaseService {
         sound: 'default',
         title: '🔴 Song is Live!',
         body: `"${title}" is now active in your rehearsal.`,
-        data: { screen: 'Rehearsal' },
+        data: {
+          screen: 'Rehearsal',
+          params: {
+            songId: songId,
+            program: programData
+          }
+        },
+        channelId: 'default',
+        priority: 'high',
       }));
 
       const response = await fetch('https://exp.host/--/api/v2/push/send', {
