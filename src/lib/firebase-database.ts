@@ -343,8 +343,9 @@ export class FirebaseDatabaseService {
     try {
       await db.collection(collectionName).doc(docId).set(data)
 
-      if (collectionName === 'zone_songs' && data.isActive === true) {
-        this.handleLiveSongNotification(docId).catch(err => {
+      const targetCollections = ['zone_songs', 'praise_night_songs', 'subgroup_songs'];
+      if (targetCollections.includes(collectionName) && (data.isActive === true || String(data.isActive) === 'true')) {
+        this.handleLiveSongNotification(collectionName, docId).catch(err => {
           console.error('[Push Notification] Error handling song notification:', err);
         });
       }
@@ -374,8 +375,9 @@ export class FirebaseDatabaseService {
     try {
       const docRef = await db.collection(collectionName).add(data)
 
-      if (collectionName === 'zone_songs' && data.isActive === true) {
-        this.handleLiveSongNotification(docRef.id).catch(err => {
+      const targetCollections = ['zone_songs', 'praise_night_songs', 'subgroup_songs'];
+      if (targetCollections.includes(collectionName) && (data.isActive === true || String(data.isActive) === 'true')) {
+        this.handleLiveSongNotification(collectionName, docRef.id).catch(err => {
           console.error('[Push Notification] Error handling song notification:', err);
         });
       }
@@ -405,8 +407,9 @@ export class FirebaseDatabaseService {
     try {
       await db.collection(collectionName).doc(docId).set(data, { merge: true })
 
-      if (collectionName === 'zone_songs' && data.isActive === true) {
-        this.handleLiveSongNotification(docId).catch(err => {
+      const targetCollections = ['zone_songs', 'praise_night_songs', 'subgroup_songs'];
+      if (targetCollections.includes(collectionName) && (data.isActive === true || String(data.isActive) === 'true')) {
+        this.handleLiveSongNotification(collectionName, docId).catch(err => {
           console.error('[Push Notification] Error handling song notification:', err);
         });
       }
@@ -418,29 +421,42 @@ export class FirebaseDatabaseService {
     }
   }
 
-  static async handleLiveSongNotification(songId: string) {
+  static async handleLiveSongNotification(collectionName: string, songId: string) {
     try {
-      const songSnap = await db.collection('zone_songs').doc(songId).get();
+      const songSnap = await db.collection(collectionName).doc(songId).get();
       if (!songSnap.exists) return;
       const song = songSnap.data();
       if (!song) return;
 
       const title = song.title || 'A song';
-      const zoneId = song.zoneId;
-
-      console.log(`[Push Notification] Song "${title}" is now active in zone: ${zoneId}`);
+      console.log(`[Push Notification] Song "${title}" is now active (Collection: ${collectionName})`);
 
       // Query members
       let userIds: string[] = [];
-      if (zoneId) {
-        const membersSnap = await db.collection('zone_members')
-          .where('zoneId', '==', zoneId)
-          .get();
-        userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+
+      if (collectionName === 'subgroup_songs') {
+        const subGroupId = song.subGroupId;
+        if (subGroupId) {
+          const subGroupSnap = await db.collection('subgroups').doc(subGroupId).get();
+          if (subGroupSnap.exists) {
+            userIds = subGroupSnap.data()?.memberIds || [];
+          }
+        }
       } else {
-        // HQ song - notify all hq members
-        const membersSnap = await db.collection('hq_members').get();
-        userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+        const zoneId = song.zoneId;
+        const { isHQGroup } = await import('@/config/zones');
+        const isHQ = zoneId ? isHQGroup(zoneId) : true;
+
+        if (!isHQ && zoneId) {
+          const membersSnap = await db.collection('zone_members')
+            .where('zoneId', '==', zoneId)
+            .get();
+          userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+        } else {
+          // HQ song - notify all hq members
+          const membersSnap = await db.collection('hq_members').get();
+          userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+        }
       }
 
       if (userIds.length === 0) {
