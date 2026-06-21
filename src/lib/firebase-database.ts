@@ -1,4 +1,4 @@
-import { db } from './firebase-admin'
+import { db, admin } from './firebase-admin'
 
 export class FirebaseDatabaseService {
   // Fetch praise nights
@@ -343,6 +343,12 @@ export class FirebaseDatabaseService {
     try {
       await db.collection(collectionName).doc(docId).set(data)
 
+      if (collectionName === 'zone_songs' && data.isActive === true) {
+        this.handleLiveSongNotification(docId).catch(err => {
+          console.error('[Push Notification] Error handling song notification:', err);
+        });
+      }
+
       if (collectionName === 'analytics_events' && data.type) {
         try {
           const { AnalyticsAggregationService } = await import('./analytics-aggregation-service');
@@ -368,6 +374,12 @@ export class FirebaseDatabaseService {
     try {
       const docRef = await db.collection(collectionName).add(data)
 
+      if (collectionName === 'zone_songs' && data.isActive === true) {
+        this.handleLiveSongNotification(docRef.id).catch(err => {
+          console.error('[Push Notification] Error handling song notification:', err);
+        });
+      }
+
       if (collectionName === 'analytics_events' && data.type) {
         try {
           const { AnalyticsAggregationService } = await import('./analytics-aggregation-service');
@@ -392,10 +404,96 @@ export class FirebaseDatabaseService {
   static async updateDocument(collectionName: string, docId: string, data: any) {
     try {
       await db.collection(collectionName).doc(docId).set(data, { merge: true })
+
+      if (collectionName === 'zone_songs' && data.isActive === true) {
+        this.handleLiveSongNotification(docId).catch(err => {
+          console.error('[Push Notification] Error handling song notification:', err);
+        });
+      }
+
       return { success: true }
     } catch (error) {
       console.error(`Error updating document ${docId}:`, error)
       throw error
+    }
+  }
+
+  static async handleLiveSongNotification(songId: string) {
+    try {
+      const songSnap = await db.collection('zone_songs').doc(songId).get();
+      if (!songSnap.exists) return;
+      const song = songSnap.data();
+      if (!song) return;
+
+      const title = song.title || 'A song';
+      const zoneId = song.zoneId;
+
+      console.log(`[Push Notification] Song "${title}" is now active in zone: ${zoneId}`);
+
+      // Query members
+      let userIds: string[] = [];
+      if (zoneId) {
+        const membersSnap = await db.collection('zone_members')
+          .where('zoneId', '==', zoneId)
+          .get();
+        userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+      } else {
+        // HQ song - notify all hq members
+        const membersSnap = await db.collection('hq_members').get();
+        userIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+      }
+
+      if (userIds.length === 0) {
+        console.log('[Push Notification] No members to notify.');
+        return;
+      }
+
+      // Fetch expo push tokens
+      const tokens: string[] = [];
+      const batchSize = 30;
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batchIds = userIds.slice(i, i + batchSize);
+        const profilesSnap = await db.collection('profiles')
+          .where(admin.firestore.FieldPath.documentId(), 'in', batchIds)
+          .get();
+
+        profilesSnap.docs.forEach(doc => {
+          const profile = doc.data();
+          if (profile.expoPushToken && profile.expoPushToken.startsWith('ExponentPushToken')) {
+            tokens.push(profile.expoPushToken);
+          }
+        });
+      }
+
+      if (tokens.length === 0) {
+        console.log('[Push Notification] No Expo push tokens found.');
+        return;
+      }
+
+      console.log(`[Push Notification] Sending push notification to ${tokens.length} users...`);
+
+      const messages = tokens.map(token => ({
+        to: token,
+        sound: 'default',
+        title: '🔴 Song is Live!',
+        body: `"${title}" is now active in your rehearsal.`,
+        data: { screen: 'Rehearsal' },
+      }));
+
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messages),
+      });
+
+      const result = await response.json();
+      console.log('[Push Notification] Expo send result:', result);
+    } catch (e) {
+      console.error('[Push Notification] failed:', e);
     }
   }
 
