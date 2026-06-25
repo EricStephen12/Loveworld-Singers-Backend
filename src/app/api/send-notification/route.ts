@@ -95,8 +95,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No recipients specified' }, { status: 400 });
     }
 
-    // Filter recipients and fetch tokens
+    // Filter recipients
     const filteredRecipients = recipientIds.filter(id => id !== excludeUserId);
+
+    // ── OneSignal (Primary Path) ──────────────────────────────────────────────
+    // OneSignal targets users by external_id (Firebase UID), which the mobile
+    // SDK sets automatically via OneSignal.login(uid) on auth.
+    const onesignalAppId = process.env.ONESIGNAL_APP_ID || process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '';
+    const onesignalRestApiKey = process.env.ONESIGNAL_REST_API_KEY || '';
+
+    if (onesignalAppId && onesignalRestApiKey && filteredRecipients.length > 0) {
+      try {
+        const isHighPriority = type === 'chat' || type === 'call';
+        const displayTitle = (senderName && type === 'chat') ? `${senderName}` : title;
+
+        const onesignalPayload: Record<string, any> = {
+          app_id: onesignalAppId,
+          include_aliases: {
+            external_id: filteredRecipients,
+          },
+          target_channel: 'push',
+          headings: { en: displayTitle },
+          contents: { en: notifBody },
+          data: {
+            ...data,
+            type,
+            senderName: senderName || '',
+            senderAvatar: senderAvatar || '',
+            timestamp: Date.now().toString(),
+          },
+          // High priority for calls and chat messages
+          priority: isHighPriority ? 10 : 5,
+        };
+
+        // Add big picture for Android if we have a sender image
+        if (senderImage) {
+          onesignalPayload.big_picture = senderImage;
+          onesignalPayload.ios_attachments = { image: senderImage };
+        }
+
+        // Add call-specific settings
+        if (type === 'call') {
+          onesignalPayload.android_channel_id = 'voice_calls';
+          onesignalPayload.ttl = 120; // 2 minute TTL for calls
+        }
+
+        const onesignalResponse = await fetch('https://api.onesignal.com/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${onesignalRestApiKey}`,
+          },
+          body: JSON.stringify(onesignalPayload),
+        });
+
+        const onesignalResult = await onesignalResponse.json();
+        console.log('[Notification] OneSignal result:', JSON.stringify(onesignalResult));
+
+        if (onesignalResult.id) {
+          // OneSignal accepted the notification — return success
+          return NextResponse.json({
+            success: true,
+            provider: 'onesignal',
+            sentCount: onesignalResult.recipients || filteredRecipients.length,
+            onesignalId: onesignalResult.id,
+            totalRecipients: filteredRecipients.length,
+          });
+        } else {
+          console.warn('[Notification] OneSignal did not return an ID, falling back to FCM:', onesignalResult);
+        }
+      } catch (onesignalError) {
+        console.error('[Notification] OneSignal error, falling back to FCM:', onesignalError);
+      }
+    }
+
+    // ── FCM Fallback ──────────────────────────────────────────────────────────
+    // Fetch FCM tokens from Realtime Database
     const tokenPromises = filteredRecipients.map(id => getUserFCMTokens(id));
     const tokenResults = await Promise.all(tokenPromises);
 
@@ -109,7 +183,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (allTokens.length === 0) {
-      return NextResponse.json({ success: true, sentCount: 0, message: 'No active FCM tokens found' });
+      return NextResponse.json({ success: true, sentCount: 0, provider: 'none', message: 'No active FCM tokens found (OneSignal may have delivered)' });
     }
 
     // Build notification URLs
