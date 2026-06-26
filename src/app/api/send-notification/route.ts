@@ -3,7 +3,7 @@
 // Supports: chat, audiolab, calendar, song, media, zone, call
 
 import { NextRequest, NextResponse } from 'next/server';
-import { admin, rtdb } from '@/lib/firebase-admin';
+import { admin, rtdb, db } from '@/lib/firebase-admin';
 import { enforceRateLimit, isInternalRequest, verifyFirebaseIdToken } from '@/lib/api-guards';
 
 // Notification types
@@ -109,11 +109,12 @@ export async function POST(req: NextRequest) {
         const isHighPriority = type === 'chat' || type === 'call';
         const displayTitle = (senderName && type === 'chat') ? `${senderName}` : title;
 
+        // Fetch direct subscription IDs from Firestore
+        const onesignalSubIds = await getUserOneSignalSubIds(filteredRecipients);
+        console.log('[Notification] OneSignal sub IDs fetched:', onesignalSubIds);
+
         const onesignalPayload: Record<string, any> = {
           app_id: onesignalAppId,
-          include_aliases: {
-            external_id: filteredRecipients,
-          },
           target_channel: 'push',
           headings: { en: displayTitle },
           contents: { en: notifBody },
@@ -127,6 +128,14 @@ export async function POST(req: NextRequest) {
           // High priority for calls and chat messages
           priority: isHighPriority ? 10 : 5,
         };
+
+        if (onesignalSubIds.length > 0) {
+          onesignalPayload.include_subscription_ids = onesignalSubIds;
+        } else {
+          onesignalPayload.include_aliases = {
+            external_id: filteredRecipients,
+          };
+        }
 
         // Add big picture for Android if we have a sender image
         if (senderImage) {
@@ -387,6 +396,30 @@ async function getUserFCMTokens(userId: string): Promise<string[]> {
     return tokens;
   } catch (error) {
  console.error('[Notification] Error getting tokens for user', userId, ':', error);
+    return [];
+  }
+}
+
+// Helper function to get user's OneSignal subscription IDs from Firestore
+async function getUserOneSignalSubIds(userIds: string[]): Promise<string[]> {
+  try {
+    const subIds: string[] = [];
+    const chunks: string[][] = [];
+    for (let i = 0; i < userIds.length; i += 10) {
+      chunks.push(userIds.slice(i, i + 10));
+    }
+    for (const chunk of chunks) {
+      const snap = await db.collection('profiles').where(admin.firestore.FieldPath.documentId(), 'in', chunk).get();
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.onesignalSubId) {
+          subIds.push(data.onesignalSubId);
+        }
+      });
+    }
+    return subIds;
+  } catch (error) {
+    console.error('[Notification] Error getting OneSignal subscription IDs:', error);
     return [];
   }
 }
