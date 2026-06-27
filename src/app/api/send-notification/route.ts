@@ -145,8 +145,8 @@ export async function POST(req: NextRequest) {
 
         // Add call-specific settings
         if (type === 'call') {
-          onesignalPayload.android_channel_id = 'voice_calls';
-          onesignalPayload.ttl = 120; // 2 minute TTL for calls
+          onesignalPayload.ttl = 120;
+          onesignalPayload.priority = 10;
         }
 
         const onesignalResponse = await fetch('https://api.onesignal.com/notifications', {
