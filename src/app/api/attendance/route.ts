@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { isInternalRequest } from '@/lib/api-guards';
+import type { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const rehearsalId = searchParams.get('rehearsalId');
     const userId = searchParams.get('userId');
@@ -19,8 +25,8 @@ export async function GET(request: Request) {
       const zoneName = targetZone?.name || '';
       const zoneSlug = targetZone?.slug || '';
 
-      // Fetch broad collection of attendance records to ensure we catch all variations of zoneId
-      const allRecords = await FirebaseDatabaseService.getCollection('attendance', 1000);
+      // Fetch recent collection of attendance records to ensure we catch all variations of zoneId
+      const allRecords = await FirebaseDatabaseService.getCollectionInBatches('attendance', 1000, 1000, 'timestamp');
       
       // Also fetch zone members to match records by userId if zoneId is missing/unknown in the attendance record
       const zoneMembers = await FirebaseDatabaseService.getCollectionWhere('zone_members', 'zoneId', '==', zoneId);
@@ -35,7 +41,7 @@ export async function GET(request: Request) {
         return false;
       });
     } else {
-      records = await FirebaseDatabaseService.getCollection('attendance', 500);
+      records = await FirebaseDatabaseService.getCollectionInBatches('attendance', 500, 500, 'timestamp');
     }
 
     // Sort records by timestamp descending (most recent first)
@@ -55,8 +61,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId: adminId, qrCode, eventName, zoneId } = body;
 

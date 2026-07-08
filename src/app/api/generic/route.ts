@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { FirebaseDatabaseService } from '@/lib/firebase-database';
+import { isInternalRequest } from '@/lib/api-guards';
+import type { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const collectionName = searchParams.get('collection');
     const id = searchParams.get('id');
@@ -47,8 +53,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const collectionName = searchParams.get('collection');
     const id = searchParams.get('id');
@@ -71,8 +81,12 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const collectionName = searchParams.get('collection');
     const id = searchParams.get('id');
@@ -90,8 +104,12 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const collectionName = searchParams.get('collection');
     const id = searchParams.get('id');

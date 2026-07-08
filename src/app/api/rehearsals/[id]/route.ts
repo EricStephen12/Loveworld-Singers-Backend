@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { ZoneDatabaseService } from '@/lib/zone-database-service';
+import { isInternalRequest } from '@/lib/api-guards';
+import type { NextRequest } from 'next/server';
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const resolvedParams = await params;
     const id = resolvedParams.id;
     const body = await request.json();
@@ -20,10 +26,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const resolvedParams = await params;
     const id = resolvedParams.id;
     const { searchParams } = new URL(request.url);

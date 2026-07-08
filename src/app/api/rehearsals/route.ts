@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { ZoneDatabaseService } from '@/lib/zone-database-service';
+import { isInternalRequest } from '@/lib/api-guards';
+import type { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const zoneId = searchParams.get('zoneId');
     const limit = parseInt(searchParams.get('limit') || '1000');
@@ -21,8 +27,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    if (!isInternalRequest(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid API Key' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { zoneId, ...data } = body;
 
