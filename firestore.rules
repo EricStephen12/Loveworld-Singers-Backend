@@ -486,6 +486,10 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
     match /songs/{songId} { allow read, write: if true; }
     match /admin_messages/{messageId} { allow read: if isAuthenticated(); allow create, delete: if true; allow update: if false; }
     match /song_notifications/{notificationId} { allow read, create, update, delete: if isAuthenticated(); }
